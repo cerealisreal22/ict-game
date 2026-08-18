@@ -134,6 +134,37 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* Opening Video Screen */
+        #opening-video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 200;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        #opening-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .click-hint {
+            position: absolute;
+            bottom: 30px;
+            color: #00ffff;
+            font-size: 1.2rem;
+            text-shadow: 0 0 10px #00ffff;
+            animation: pulse 1.5s infinite;
+            pointer-events: none;
+        }
+
         /* Video End Screen Overlay */
         #ending-video-container {
             position: fixed;
@@ -151,11 +182,20 @@
         #ending-video {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* หรือเปลี่ยนเป็น contain ถ้าไม่อยากให้ภาพโดนตัดขอบ */
+            object-fit: cover;
         }
     </style>
 </head>
 <body>
+
+    <!-- Opening Video Screen -->
+    <div id="opening-video-container">
+        <video id="opening-video" autoplay loop muted playsinline>
+            <source src="opening.mp4" type="video/mp4">
+            เบราว์เซอร์ของคุณไม่รองรับการเล่นวิดีโอ
+        </video>
+        <div class="click-hint tech-font">▼ แตะหรือคลิกหน้าจอเพื่อเริ่มกิจกรรม ▼</div>
+    </div>
 
     <div id="game-container">
         <div class="bg-grid"></div>
@@ -167,7 +207,7 @@
         <div id="minions-container"></div>
 
         <!-- Loading Screen Overlay -->
-        <div id="loading-screen" class="overlay">
+        <div id="loading-screen" class="overlay hidden-screen">
             <div class="loader mb-6"></div>
             <h2 class="tech-font text-cyan-400 text-3xl animate-pulse">กำลังเชื่อมต่อระบบ AI...</h2>
         </div>
@@ -175,10 +215,9 @@
         <!-- Fade to Black Screen -->
         <div id="black-screen" class="fixed top-0 left-0 w-full h-full bg-black z-[100] pointer-events-none opacity-0" style="transition: opacity 1.5s ease-in-out;"></div>
 
-        <!-- Ending Video Screen (เพิ่มตรงนี้) -->
+        <!-- Ending Video Screen -->
         <div id="ending-video-container">
             <video id="ending-video" playsinline>
-                <!-- ใส่ชื่อไฟล์วิดีโอของคุณตรงนี้ เช่น ending.mp4 หรือใส่ URL วิดีโอสด -->
                 <source src="ending.mp4" type="video/mp4">
                 เบราว์เซอร์ของคุณไม่รองรับการเล่นวิดีโอ
             </video>
@@ -192,7 +231,9 @@
         const loadingScreen = document.getElementById('loading-screen');
         const minionsContainer = document.getElementById('minions-container');
 
-        // Ending Video Elements
+        // Video Elements
+        const openingVideoContainer = document.getElementById('opening-video-container');
+        const openingVideo = document.getElementById('opening-video');
         const endingVideoContainer = document.getElementById('ending-video-container');
         const endingVideo = document.getElementById('ending-video');
 
@@ -216,9 +257,28 @@
             return audioCtx;
         }
 
-        window.addEventListener('click', getAudioCtx);
-        window.addEventListener('touchstart', getAudioCtx);
-        window.addEventListener('mousemove', getAudioCtx);
+        // เริ่มเกมเมื่อกดคลิกที่หน้าจอ Opening Video
+        openingVideoContainer.addEventListener('click', startSequence);
+        openingVideoContainer.addEventListener('touchstart', startSequence);
+
+        function startSequence() {
+            // เล่น Audio Context เมื่อมี Interaction
+            getAudioCtx();
+
+            // ปิดวิดีโอ Opening
+            openingVideo.pause();
+            openingVideoContainer.style.display = 'none';
+
+            // แสดงหน้าจอ Loading
+            loadingScreen.classList.remove('hidden-screen');
+
+            // เริ่มทำงาน AI และเปิดกล้อง
+            initializeAI();
+
+            // ลบ Event listener เพื่อป้องกันการกดซ้ำ
+            openingVideoContainer.removeEventListener('click', startSequence);
+            openingVideoContainer.removeEventListener('touchstart', startSequence);
+        }
 
         function playGrabSound() {
             try {
@@ -586,7 +646,7 @@
                         const blackScreen = document.getElementById('black-screen');
                         blackScreen.style.opacity = '1';
                         
-                        // 2. เมื่อหน้าจอดำสนิท (1.5 - 2 วินาที) สั่งเปิดและเล่นวิดีโอทันที
+                        // 2. เมื่อหน้าจอดำสนิท (1.8 วินาที) สั่งเปิดและเล่นวิดีโอทันที
                         setTimeout(() => {
                             if (fireworksInterval) clearInterval(fireworksInterval);
                             
@@ -596,7 +656,6 @@
                             // แสดงหน้าต่างวิดีโอและเริ่มเล่น
                             endingVideoContainer.style.display = 'flex';
                             
-                            // พยายามเล่นวิดีโอแบบมีเสียง ถ้าเบราว์เซอร์บล็อกจะเล่นแบบปิดเสียงอัตโนมัติ
                             endingVideo.play().catch(error => {
                                 console.log("Autoplay with audio blocked, playing muted.");
                                 endingVideo.muted = true;
@@ -749,7 +808,6 @@
             canvasElement.width = cw;
             canvasElement.height = ch;
             initLevelLayout();
-            initializeAI();
         });
 
         initLevelLayout();
