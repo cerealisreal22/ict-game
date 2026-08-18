@@ -22,12 +22,11 @@
             overflow: hidden;
             background-color: #050a1f;
             font-family: 'Mitr', sans-serif;
-            touch-action: none; /* Prevent scroll on touch devices */
+            touch-action: none;
         }
 
         .tech-font { font-family: 'Orbitron', sans-serif; }
 
-        /* Background grid for tech theme */
         .bg-grid {
             position: absolute;
             width: 100%;
@@ -58,7 +57,6 @@
             object-fit: cover;
         }
 
-        /* Overlay Screens */
         .overlay {
             position: absolute;
             top: 0;
@@ -79,29 +77,6 @@
             pointer-events: none;
         }
 
-        /* Neon Button */
-        .neon-btn {
-            background: transparent;
-            color: #0ff;
-            border: 2px solid #0ff;
-            padding: 15px 40px;
-            font-size: 2rem;
-            font-weight: 700;
-            border-radius: 10px;
-            cursor: pointer;
-            text-transform: uppercase;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 255, 255, 0.5);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        .neon-btn:hover {
-            background: #0ff;
-            color: #000;
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.8), inset 0 0 20px rgba(0, 255, 255, 0.8);
-        }
-
-        /* Minion Animations */
         #minions-container {
             position: absolute;
             bottom: 0;
@@ -159,6 +134,25 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* Video End Screen Overlay */
+        #ending-video-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 150;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #ending-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* หรือเปลี่ยนเป็น contain ถ้าไม่อยากให้ภาพโดนตัดขอบ */
+        }
     </style>
 </head>
 <body>
@@ -178,8 +172,17 @@
             <h2 class="tech-font text-cyan-400 text-3xl animate-pulse">กำลังเชื่อมต่อระบบ AI...</h2>
         </div>
 
-        <!-- Fade to Black Screen for smooth transition -->
+        <!-- Fade to Black Screen -->
         <div id="black-screen" class="fixed top-0 left-0 w-full h-full bg-black z-[100] pointer-events-none opacity-0" style="transition: opacity 1.5s ease-in-out;"></div>
+
+        <!-- Ending Video Screen (เพิ่มตรงนี้) -->
+        <div id="ending-video-container">
+            <video id="ending-video" playsinline>
+                <!-- ใส่ชื่อไฟล์วิดีโอของคุณตรงนี้ เช่น ending.mp4 หรือใส่ URL วิดีโอสด -->
+                <source src="ending.mp4" type="video/mp4">
+                เบราว์เซอร์ของคุณไม่รองรับการเล่นวิดีโอ
+            </video>
+        </div>
     </div>
 
     <script>
@@ -188,6 +191,10 @@
         const canvasCtx = canvasElement.getContext('2d');
         const loadingScreen = document.getElementById('loading-screen');
         const minionsContainer = document.getElementById('minions-container');
+
+        // Ending Video Elements
+        const endingVideoContainer = document.getElementById('ending-video-container');
+        const endingVideo = document.getElementById('ending-video');
 
         let isGameRunning = false;
         let isGameWon = false;
@@ -198,7 +205,6 @@
         let ch = window.innerHeight;
         let fireworksInterval = null;
 
-        // Sound Synthesis via Web Audio API
         let audioCtx = null;
         function getAudioCtx() {
             if (!audioCtx) {
@@ -210,12 +216,10 @@
             return audioCtx;
         }
 
-        // Unlock audio on any interaction
         window.addEventListener('click', getAudioCtx);
         window.addEventListener('touchstart', getAudioCtx);
         window.addEventListener('mousemove', getAudioCtx);
 
-        // Sound 1: Grab (Sci-Fi Bloop)
         function playGrabSound() {
             try {
                 const ctx = getAudioCtx();
@@ -233,11 +237,10 @@
             } catch(e) {}
         }
 
-        // Sound 2: Dragging Motion (Dynamic Pitch Hum)
         let lastDragSoundTime = 0;
         function playDragSound(x, y, lastX, lastY) {
             const now = Date.now();
-            if (now - lastDragSoundTime < 60) return; // Throttle sound generation
+            if (now - lastDragSoundTime < 60) return;
             
             try {
                 const speed = Math.hypot(x - lastX, y - lastY);
@@ -259,7 +262,6 @@
             } catch(e) {}
         }
 
-        // Sound 3: Snap into place (Chime Chord)
         function playSnapSound() {
             try {
                 const ctx = getAudioCtx();
@@ -278,7 +280,6 @@
             } catch(e) {}
         }
 
-        // Sound 4: Firework explosion
         function playFireworkSound() {
             try {
                 const ctx = getAudioCtx();
@@ -296,7 +297,6 @@
             } catch(e) {}
         }
 
-        // Resize handler
         window.addEventListener('resize', () => {
             cw = window.innerWidth;
             ch = window.innerHeight;
@@ -305,23 +305,19 @@
             initLevelLayout();
         });
 
-        // Game Entities
         let pieces = [];
         let targets = [];
         const pieceWidth = 180;
         const pieceHeight = 90;
         
-        // Hands state
         let hands = {
             left: { x: 0, y: 0, active: false, holds: null },
             right: { x: 0, y: 0, active: false, holds: null }
         };
 
-        // Fireworks System
         let particles = [];
 
         function initLevelLayout() {
-            // Position targets in the center top
             const spacing = cw < 800 ? 100 : 250;
             const startX = cw/2 - spacing;
             const targetY = ch * 0.25;
@@ -332,11 +328,9 @@
                 { id: 'all', text: 'ALL', x: startX + spacing * 2, y: targetY }
             ];
 
-            // Only initialize pieces position if game hasn't started or won
             if (!isGameWon) {
-                // Position pieces randomly at the bottom area
                 let xPositions = [cw*0.2, cw*0.5, cw*0.8];
-                xPositions.sort(() => Math.random() - 0.5); // Shuffle positions
+                xPositions.sort(() => Math.random() - 0.5);
 
                 pieces = [
                     { id: 'ICT', text: 'ICT', x: xPositions[0], y: ch*0.75 + (Math.random() * 40 - 20), placed: false, heldBy: null, color: '#0ff' },
@@ -344,7 +338,6 @@
                     { id: 'all', text: 'ALL', x: xPositions[2], y: ch*0.75 + (Math.random() * 40 - 20), placed: false, heldBy: null, color: '#ff0' }
                 ];
             } else {
-                // Adjust final merge position on resize if already won
                 const centerX = cw / 2;
                 const centerY = ch / 2;
                 const finalSpacing = pieceWidth + 10;
@@ -370,7 +363,7 @@
                 this.size = Math.random() * 4 + 2;
             }
             update() {
-                this.vy += 0.2; // Gravity
+                this.vy += 0.2;
                 this.x += this.vx;
                 this.y += this.vy;
                 this.alpha -= this.decay;
@@ -397,7 +390,6 @@
         }
 
         function spawnMinionCelebration() {
-            // Create running minions (Shorter count & faster sequence)
             for(let i=0; i<8; i++) {
                 setTimeout(() => {
                     const minion = document.createElement('div');
@@ -409,7 +401,6 @@
                 }, i * 150);
             }
 
-            // Create jumping minions from bottom
             for(let i=0; i<4; i++) {
                 setTimeout(() => {
                     const minion = document.createElement('div');
@@ -426,7 +417,6 @@
         function onResults(results) {
             if (!isGameRunning) return;
 
-            // Clear canvas & draw video frame (mirrored)
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.scale(-1, 1);
@@ -434,23 +424,16 @@
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.restore();
 
-            // Reset hand activity
             hands.left.active = false;
             hands.right.active = false;
 
             if (results.poseLandmarks) {
-                // MediaPipe Pose landmarks (mirrored logic)
-                // 15 = Left Wrist, 16 = Right Wrist (from user's perspective facing camera, 15 is right side of screen, 16 is left side of screen)
-                
-                // We use 16 as Left Hand (User's Right Hand on screen) and 15 as Right Hand (User's Left Hand on screen)
-                const leftWrist = results.poseLandmarks[16]; // User's Right Wrist
-                const rightWrist = results.poseLandmarks[15]; // User's Left Wrist
+                const leftWrist = results.poseLandmarks[16];
+                const rightWrist = results.poseLandmarks[15];
 
-                // AI Tech Grid Overlay on Body
                 drawAIOverlay(results.poseLandmarks);
 
                 if (leftWrist && leftWrist.visibility > 0.5) {
-                    // Map to mirrored canvas coords
                     hands.left.x = (1 - leftWrist.x) * cw;
                     hands.left.y = leftWrist.y * ch;
                     hands.left.active = true;
@@ -472,13 +455,12 @@
             canvasCtx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
             canvasCtx.lineWidth = 2;
             
-            // Draw connecting lines for arms to look "Techy"
             const connections = [
-                [11, 13], [13, 15], // Left arm
-                [12, 14], [14, 16], // Right arm
-                [11, 12], // Shoulders
-                [23, 24], // Hips
-                [11, 23], [12, 24] // Torso
+                [11, 13], [13, 15],
+                [12, 14], [14, 16],
+                [11, 12],
+                [23, 24],
+                [11, 23], [12, 24]
             ];
 
             connections.forEach(conn => {
@@ -492,7 +474,6 @@
                 }
             });
 
-            // Draw glowing nodes on joints
             [11,12,13,14,15,16,23,24].forEach(idx => {
                 const p = landmarks[idx];
                 if (p.visibility > 0.5) {
@@ -509,7 +490,6 @@
 
         function updateGameLogic() {
             if (isGameWon) {
-                // Animate pieces to their final merged positions at the center
                 pieces.forEach(p => {
                     if (p.targetX !== undefined && p.targetY !== undefined) {
                         p.x += (p.targetX - p.x) * 0.08;
@@ -522,11 +502,9 @@
             const grabRadius = 80;
             const snapRadius = 100;
 
-            // Handle grabbing and releasing for both hands
             ['left', 'right'].forEach(side => {
                 let hand = hands[side];
                 if (!hand.active) {
-                    // Drop piece if hand disappears
                     if (hand.holds) {
                         hand.holds.heldBy = null;
                         hand.holds = null;
@@ -534,7 +512,6 @@
                     return;
                 }
 
-                // If not holding, try to grab
                 if (!hand.holds) {
                     for (let p of pieces) {
                         if (!p.placed && !p.heldBy) {
@@ -545,40 +522,34 @@
                                 hand.lastX = hand.x;
                                 hand.lastY = hand.y;
                                 playGrabSound();
-                                break; // Grab only one
+                                break;
                             }
                         }
                     }
                 }
 
-                // If holding, update position and check targets
                 if (hand.holds) {
                     let p = hand.holds;
                     
-                    // Sound when dragging
                     if (hand.lastX !== undefined && hand.lastY !== undefined) {
                         playDragSound(hand.x, hand.y, hand.lastX, hand.lastY);
                     }
                     hand.lastX = hand.x;
                     hand.lastY = hand.y;
 
-                    // Ease piece towards hand position
                     p.x += (hand.x - p.x) * 0.3;
                     p.y += (hand.y - p.y) * 0.3;
 
-                    // Check if near corresponding target
                     let target = targets.find(t => t.id === p.id);
                     if (target) {
                         let distToTarget = Math.hypot(p.x - target.x, p.y - target.y);
                         if (distToTarget < snapRadius) {
-                            // Snap and place
                             p.placed = true;
                             p.x = target.x;
                             p.y = target.y;
                             p.heldBy = null;
                             hand.holds = null;
                             
-                            // Visual & Audio effect on placement
                             playSnapSound();
                             createExplosion(target.x, target.y);
                             
@@ -594,35 +565,45 @@
                 isGameWon = true;
                 hideTargets = true;
                 
-                // Calculate final positions for pieces to snap together
                 const centerX = cw / 2;
                 const centerY = ch / 2;
-                const finalSpacing = pieceWidth + 10; // 10px padding between boxes
+                const finalSpacing = pieceWidth + 10;
 
                 pieces.find(p => p.id === 'ICT').targetX = centerX - finalSpacing;
                 pieces.find(p => p.id === 'for').targetX = centerX;
                 pieces.find(p => p.id === 'all').targetX = centerX + finalSpacing;
                 pieces.forEach(p => p.targetY = centerY);
 
-                // Quick transition: wait 0.8s for merge animation before celebration
                 setTimeout(() => {
-                    // Fireworks burst
                     fireworksInterval = setInterval(() => {
                         createExplosion(cw * Math.random(), ch * (Math.random() * 0.5));
                     }, 400);
 
-                    // Spawn Minions
                     spawnMinionCelebration();
 
-                    // Fade to black after 2 seconds
+                    // 1. เริ่มเอฟเฟกต์จอดำ
                     setTimeout(() => {
                         const blackScreen = document.getElementById('black-screen');
                         blackScreen.style.opacity = '1';
                         
-                        // Stop fireworks after screen goes fully black
+                        // 2. เมื่อหน้าจอดำสนิท (1.5 - 2 วินาที) สั่งเปิดและเล่นวิดีโอทันที
                         setTimeout(() => {
                             if (fireworksInterval) clearInterval(fireworksInterval);
-                        }, 1500);
+                            
+                            // ปิดการทำงานของกล้องเพื่อประหยัดทรัพยากร
+                            if (camera) camera.stop();
+
+                            // แสดงหน้าต่างวิดีโอและเริ่มเล่น
+                            endingVideoContainer.style.display = 'flex';
+                            
+                            // พยายามเล่นวิดีโอแบบมีเสียง ถ้าเบราว์เซอร์บล็อกจะเล่นแบบปิดเสียงอัตโนมัติ
+                            endingVideo.play().catch(error => {
+                                console.log("Autoplay with audio blocked, playing muted.");
+                                endingVideo.muted = true;
+                                endingVideo.play();
+                            });
+
+                        }, 1800);
                     }, 2000);
                 }, 800);
             }
@@ -633,25 +614,21 @@
             canvasCtx.textAlign = 'center';
             canvasCtx.textBaseline = 'middle';
 
-            // 1. Draw Target Cones & Slots (High Contrast & Clear)
             if (!hideTargets) {
                 targets.forEach(t => {
                     canvasCtx.save();
                     
-                    // Solid high-visibility semi-transparent background box for target slot
                     canvasCtx.fillStyle = 'rgba(5, 25, 55, 0.85)';
                     canvasCtx.strokeStyle = '#00ffff';
                     canvasCtx.lineWidth = 4;
                     canvasCtx.shadowBlur = 20;
                     canvasCtx.shadowColor = '#00ffff';
 
-                    // Draw outer rounded target box
                     canvasCtx.beginPath();
                     canvasCtx.roundRect(t.x - pieceWidth/2, t.y - pieceHeight/2, pieceWidth, pieceHeight, 15);
                     canvasCtx.fill();
                     canvasCtx.stroke();
 
-                    // Inner dashed border to indicate "Drop Here" slot
                     canvasCtx.shadowBlur = 0;
                     canvasCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
                     canvasCtx.lineWidth = 2;
@@ -665,27 +642,22 @@
                 });
             }
 
-            // 2. Draw Puzzle Pieces
             pieces.forEach(p => {
                 canvasCtx.save();
                 canvasCtx.translate(p.x, p.y);
                 
-                // Add floating effect if not placed and not held
                 if (!p.placed && !p.heldBy) {
                     canvasCtx.translate(0, Math.sin(Date.now() / 300) * 10);
                 }
 
-                // Add pop scale effect if placed
                 let scale = 1;
                 if (p.placed) scale = 1.05;
                 if (p.heldBy) scale = 1.1;
                 canvasCtx.scale(scale, scale);
 
-                // Glow effect
                 canvasCtx.shadowBlur = p.placed ? 30 : (p.heldBy ? 20 : 10);
                 canvasCtx.shadowColor = p.placed ? '#ff0' : p.color;
 
-                // Box
                 canvasCtx.fillStyle = p.placed ? 'rgba(255, 215, 0, 0.9)' : 'rgba(10, 20, 50, 0.9)';
                 canvasCtx.strokeStyle = p.placed ? '#fff' : p.color;
                 canvasCtx.lineWidth = 4;
@@ -695,36 +667,32 @@
                 canvasCtx.fill();
                 canvasCtx.stroke();
 
-                // Text inside box
                 canvasCtx.font = "bold 40px 'Orbitron'";
                 canvasCtx.fillStyle = p.placed ? '#000' : '#fff';
-                canvasCtx.shadowBlur = 0; // Turn off shadow for text
+                canvasCtx.shadowBlur = 0;
                 canvasCtx.fillText(p.text, 0, 0);
                 
                 canvasCtx.restore();
             });
 
-            // 3. Draw Hand Indicators (Cursors)
             if (!isGameWon) {
                 ['left', 'right'].forEach(side => {
                     let hand = hands[side];
                     if (hand.active) {
                         canvasCtx.beginPath();
-                    canvasCtx.fillStyle = hand.holds ? 'rgba(255, 215, 0, 0.6)' : 'rgba(0, 255, 255, 0.6)';
-                    canvasCtx.fill();
-                    canvasCtx.strokeStyle = '#fff';
-                    canvasCtx.lineWidth = 3;
-                    canvasCtx.stroke();
+                        canvasCtx.fillStyle = hand.holds ? 'rgba(255, 215, 0, 0.6)' : 'rgba(0, 255, 255, 0.6)';
+                        canvasCtx.fill();
+                        canvasCtx.strokeStyle = '#fff';
+                        canvasCtx.lineWidth = 3;
+                        canvasCtx.stroke();
                     
-                    // Draw outer ring
-                    canvasCtx.beginPath();
+                        canvasCtx.beginPath();
                         canvasCtx.strokeStyle = hand.holds ? 'rgba(255, 215, 0, 0.3)' : 'rgba(0, 255, 255, 0.3)';
                         canvasCtx.stroke();
                     }
                 });
             }
 
-            // 4. Draw Fireworks
             for (let i = particles.length - 1; i >= 0; i--) {
                 particles[i].update();
                 particles[i].draw(canvasCtx);
@@ -743,7 +711,7 @@
                 }});
 
                 poseAI.setOptions({
-                    modelComplexity: 1, // 0=fast, 1=balanced, 2=accurate
+                    modelComplexity: 1,
                     smoothLandmarks: true,
                     enableSegmentation: false,
                     minDetectionConfidence: 0.6,
@@ -756,7 +724,6 @@
                     onFrame: async () => {
                         await poseAI.send({image: videoElement});
                         
-                        // Hide loading screen on first successful frame
                         if (!isGameRunning) {
                             isGameRunning = true;
                             loadingScreen.classList.add('hidden-screen');
@@ -764,7 +731,7 @@
                     },
                     width: 1280,
                     height: 720,
-                    facingMode: 'user' // Front camera
+                    facingMode: 'user'
                 });
 
                 await camera.start();
@@ -778,17 +745,13 @@
             }
         }
 
-        // Auto Start Game immediately on Page Load
         window.addEventListener('load', () => {
             canvasElement.width = cw;
             canvasElement.height = ch;
             initLevelLayout();
-            
-            // Auto start camera & AI tracking
             initializeAI();
         });
 
-        // Initialize layout on load
         initLevelLayout();
     </script>
 </body>
