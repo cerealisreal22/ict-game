@@ -108,7 +108,7 @@
             transform: scaleX(-1);
         }
 
-        /* Interactive Draggable Word Card (จากโค้ดที่ 1) */
+        /* Interactive Draggable Word Card */
         .word-card {
             position: absolute;
             padding: 18px 42px;
@@ -146,7 +146,7 @@
             cursor: default;
         }
 
-        /* Target Drop Zone Frame (จากโค้ดที่ 1) */
+        /* Target Drop Zone Frame */
         .target-zone {
             position: absolute;
             width: 220px;
@@ -171,7 +171,7 @@
             box-shadow: 0 0 25px rgba(0, 230, 118, 0.6);
         }
 
-        /* Minion Celebration Animations (จากโค้ดที่ 1) */
+        /* Minion Celebration Animations */
         .minion-runner {
             position: absolute;
             bottom: -10px;
@@ -252,7 +252,7 @@
 </head>
 <body>
 
-    <!-- 1. Opening Video Screen -->
+    <!-- 1. Opening Video Screen (ดึงจากไฟล์ใน GitHub) -->
     <div id="opening-video-container">
         <video id="opening-video" autoplay loop muted playsinline>
             <source src="opening.mp4" type="video/mp4">
@@ -267,7 +267,7 @@
         <h2 class="tech-font text-cyan-400 text-3xl animate-pulse">กำลังเชื่อมต่อระบบ AI...</h2>
     </div>
 
-    <!-- 3. Main Game Layout (จากโค้ดที่ 1) -->
+    <!-- 3. Main Game Layout -->
     <video id="webcam" autoplay playsinline style="display:none;"></video>
     <canvas id="output_canvas"></canvas>
 
@@ -302,10 +302,10 @@
     <!-- 4. Black Screen Transition -->
     <div id="black-screen"></div>
 
-    <!-- 5. Ending Video Screen -->
+    <!-- 5. Ending Video Screen (ดึงจาก Google Drive) -->
     <div id="ending-video-container">
-        <video id="ending-video" playsinline>
-            <source src="ending.mp4" type="video/mp4">
+        <video id="ending-video" playsinline crossorigin="anonymous">
+            <source src="https://drive.google.com/uc?export=download&id=1zj2wXhQJo77hH9edDTpXRMwJ9cKH99op" type="video/mp4">
             เบราว์เซอร์ของคุณไม่รองรับการเล่นวิดีโอ
         </video>
     </div>
@@ -326,7 +326,7 @@
         let cameraObj = null;
         let poseObj = null;
 
-        // Audio System (จากโค้ดที่ 1)
+        // Audio System
         const AudioFX = {
             ctx: null,
             init() {
@@ -387,7 +387,7 @@
             }
         };
 
-        // Game State & Variables (จากโค้ดที่ 1)
+        // Game State & Variables
         const words = ['ICT', 'FOR', 'ALL'];
         let targets = [
             { id: 0, word: 'ICT', el: document.getElementById('target-0'), occupied: false },
@@ -399,21 +399,18 @@
         let activeCard = null;
         let isGameFinished = false;
 
-        // Sequence Event Handlers (โครงสร้างจากโค้ดที่ 2)
+        // Sequence Event Handlers
         openingVideoContainer.addEventListener('click', startSequence);
         openingVideoContainer.addEventListener('touchstart', startSequence);
 
         function startSequence() {
             AudioFX.init();
 
-            // หยุดวิดีโอ Opening
             openingVideo.pause();
             openingVideoContainer.style.display = 'none';
 
-            // แสดงหน้า Loading
             loadingScreen.classList.remove('hidden-screen');
 
-            // เริ่มเปิดกล้อง และ AI
             initAIAndCamera();
 
             openingVideoContainer.removeEventListener('click', startSequence);
@@ -650,7 +647,6 @@
             }
         }
 
-        // Victory & Sequence Transition (ผสมโค้ด 1 และ 2)
         function startVictorySequence() {
             AudioFX.playWin();
 
@@ -678,18 +674,14 @@
             launchFireworks();
             spawnMinions();
 
-            // 1. เริ่มติดเอฟเฟกต์จอดำ (Transition)
             setTimeout(() => {
                 blackScreen.style.opacity = '1';
 
-                // 2. เมื่อหน้าจอดำสนิท เปลี่ยนไปเล่น Ending Video
                 setTimeout(() => {
-                    // ปิดกล้องเพื่อประหยัดทรัพยากร
                     if (cameraObj) {
                         cameraObj.stop();
                     }
 
-                    // แสดงหน้า Ending Video และเริ่มเล่น
                     endingVideoContainer.style.display = 'flex';
                     endingVideo.play().catch(err => {
                         console.log("Autoplay blocked, muted play.");
@@ -762,7 +754,6 @@
                 cameraObj = new Camera(videoElement, {
                     onFrame: async () => {
                         await poseObj.send({ image: videoElement });
-                        // ปิดหน้า Loading เมื่อเริ่มได้รับ เฟรมรูปภาพ
                         if (!loadingScreen.classList.contains('hidden-screen')) {
                             loadingScreen.classList.add('hidden-screen');
                         }
